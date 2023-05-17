@@ -67,6 +67,11 @@ async def add_friend(friend: FriendSchema, user: str = Depends(authenticate), db
     register_success = await friend_register(friend, user, db)
     return register_success
 
+@router.delete("/friend")
+async def del_friend(friend: FriendSchema, user: str = Depends(authenticate), db: Session = Depends(get_db)):
+    remove_success = await friend_remove(friend, user, db)
+    return remove_success
+
 @router.post("/group")
 async def add_group(group: GroupSchema, user: str = Depends(authenticate), db: Session = Depends(get_db)):
     register_success = await group_register(group, user, db)

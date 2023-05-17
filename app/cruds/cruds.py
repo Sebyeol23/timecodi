@@ -143,6 +143,14 @@ async def friend_register(friend: FriendSchema, user: str, db: Session):
     db.refresh(db_friendship_2)
     return {"msg": "friend added successfully."}
 
+async def friend_remove(friend: FriendSchema, user: str, db: Session):
+    db_friendship = db.query(Friend).filter(Friend.uid == user, Friend.fid == friend.fid).first()
+    if not db_friendship:
+        raise HTTPException(status_code=404, detail="There is no friend")
+    db.delete(db_friendship)
+    db.commit()
+    return {"msg": "friend deleted successfully."}
+
 async def group_register(group: GroupSchema, user: str, db: Session):
     db_group = Group(gname=group.gname)
     db.add(db_group)
@@ -246,15 +254,15 @@ async def get_all_groupcal(gid: int, user: str, db: Session):
 async def google_event_register(user: str, db: Session):
     google=get_event()
     # print(google)
+    if google==None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Google event doesn't exist")
+
     for event in google:
         sdt=event[0]
         edt=event[1]
         cn=event[2]
         vsb=event[3]
-        if vsb=="default" or vsb=="public":
-            vsb=True
-        else:
-            vsb=False
+        
         event_exist = db.query(Event).filter(Event.uid == user,
         or_(
             and_((Event.sdatetime <= sdt), (sdt < Event.edatetime)),
@@ -263,6 +271,7 @@ async def google_event_register(user: str, db: Session):
             and_((sdt< Event.edatetime), (Event.edatetime <= edt))
             )
         ).all()
+        
         if event_exist:
             continue
         else:
