@@ -157,7 +157,7 @@ async def friend_remove(friend: FriendSchema, user: str, db: Session):
     return {"msg": "friend deleted successfully."}
 
 async def group_register(group: GroupSchema, user: str, db: Session):
-    db_group = Group(gname=group.gname)
+    db_group = Group(gname=group.gname, admin=user)
     db.add(db_group)
     db.commit()
     db.refresh(db_group)
@@ -172,6 +172,7 @@ async def group_update(gid: int, group: GroupSchema, db: Session):
     db_group.gname = group.gname
     db.add(db_group)
     db.commit()
+    db.refresh(db_group)
     return {"msg": "group name updated successfully."}
 
 async def get_all_meetings(gid: int, db: Session):
@@ -286,3 +287,8 @@ async def google_event_register(user: str, db: Session):
             db.refresh(db_event)
     return {"msg": "google calendar events added successfully."}
 
+async def get_my_group(user: str, db: Session):
+    db_group = db.query(Group).filter(Group.gid == Member.gid, Member.uid == user).all()
+    if not db_group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
+    return db_group
