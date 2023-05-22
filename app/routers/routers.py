@@ -9,10 +9,10 @@ from ..db.connection import get_db
 from ..schemas.schemas import TokenResponse, UserSchema, EventSchema, GroupSchema, MeetingSchema, FriendSchema
 from ..cruds.cruds import get_login, signin, signup, get_all_events,\
     event_register, event_remove, event_update, get_all_friends, \
-    friend_register, friend_remove, group_register, group_update, group_leave, \
+    friend_register, friend_remove, get_all_requests, friend_request, friend_accept, group_register, group_update, group_leave, \
     invited_register, member_register, \
     meeting_register, meeting_remove, meeting_update, get_all_meetings, \
-    google_event_register, get_all_groupcal, get_my_group
+    google_event_register, get_all_groupcal, get_my_group, get_weekly_groupcal
 router = APIRouter()
 
 # @router.get("/{id}")
@@ -78,6 +78,21 @@ async def del_friend(friend: FriendSchema, user: str = Depends(authenticate), db
     remove_success = await friend_remove(friend, user, db)
     return remove_success
 
+@router.get("/request")
+async def get_request(user: str = Depends(authenticate), db: Session = Depends(get_db)):
+    request_list = await get_all_requests(user, db)
+    return request_list
+
+@router.post("/request")
+async def request_friend(friend: FriendSchema, user: str = Depends(authenticate), db: Session = Depends(get_db)):
+    request_success = await friend_request(friend, user, db)
+    return request_success
+
+@router.post("/accept")
+async def accept_friend(friend: FriendSchema, user: str = Depends(authenticate), db: Session = Depends(get_db)):
+    accept_success = await friend_accept(friend, user, db)
+    return accept_success
+
 @router.post("/group")
 async def add_group(group: GroupSchema, user: str = Depends(authenticate), db: Session = Depends(get_db)):
     register_success = await group_register(group, user, db)
@@ -142,3 +157,10 @@ async def add_google_events(user: str = Depends(authenticate), db: Session = Dep
 async def get_mygrouplist(user: str = Depends(authenticate), db: Session = Depends(get_db)):
     group_list = await get_my_group(user, db)
     return group_list
+
+# SELECT * FROM 'test'.'group calenders' WHERE gid=[input_gid] and sdatetime>=[input_start_date] and edatetime<=[input_end_date]
+# get weekly group calendar
+@router.get("/weeklygroupcal")
+async def get_weekly_group_cal(gid: int, start_date: datetime.date, end_date: datetime.date, db: Session = Depends(get_db)):
+    group_cal = await get_weekly_groupcal(gid, start_date, end_date, db)
+    return group_cal
