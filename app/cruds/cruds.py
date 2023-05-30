@@ -5,7 +5,7 @@ from sqlalchemy import func, or_, and_
 from datetime import datetime, timedelta
 
 from ..auth.jwt_handler import create_access_token
-from ..models.models import User, Event, Friend, FriendRequest, Group, Member, Meeting, GroupEvent, Invited
+from ..models.models import User, Event, Friend, FriendRequest, Group, Member, Meeting, GroupEvent, Invited, Favorite
 from ..auth.hash_password import HashPassword
 from ..schemas.schemas import UserSchema, EventSchema, GroupSchema, MeetingSchema, FriendSchema
 from ..googlecal.cal_func import get_event
@@ -67,10 +67,8 @@ async def event_register(event: EventSchema, user: str, db: Session):
     ).all()
     if event_exist:
         return {"msg": "event exist."}    
-    
     # enddate가 null이 아니면 enddate까지 일주일마다 반복
     if event.enddate:
-        
         if event.edatetime.date() > event.enddate:
             return {"msg": "invalid event."}
         else:
@@ -83,7 +81,6 @@ async def event_register(event: EventSchema, user: str, db: Session):
                 db.refresh(db_event)
                 event.sdatetime+=timedelta(weeks=1)
                 event.edatetime+=timedelta(weeks=1)
-   
     # enddate가 null이면 반복 x
     else:       
         db_event = Event(uid=user, cname=event.cname, visibility=event.visibility, \
@@ -219,7 +216,7 @@ async def group_register(group: GroupSchema, user: str, db: Session):
     db.add(db_group)
     db.commit()
     db.refresh(db_group)
-    register_success = await member_register(db_group.gid, user, user, db)
+    register_success = await member_register2(db_group.gid, user, user, db)
     return {"msg": "group added successfully."}
 
 # 그룹명 수정
@@ -243,13 +240,18 @@ async def group_leave(gid: int, user: str, db: Session):
     db.delete(db_member)
     db.commit()
     
-    # db_event = db.query(GroupEvent).filter(GroupEvent.ccid == ccid).all()
-    # if not db_event:
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meeting doesn't exist")
-    # for x in db_event:
-    #     db.delete(x)
-    #     db.commit()
-    return {"msg": "group deleted successfully."}
+    db_favorite = db.query(Favorite).filter(Favorite.gid == gid, Favorite.uid == user).first()
+    if not db_favorite:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite group doesn't exist")
+    db.delete(db_favorite)
+    db.commit()
+    
+    db_event = db.query(Event).filter(Event.uid == user).all()
+    for x in db_event:
+        db_delete = db.query(GroupEvent).filter(GroupEvent.gid == gid, GroupEvent.ccid == x.cid).first()
+        db.delete(db_delete)
+        db.commit()
+    return {"msg": "group member deleted successfully."}
 
 async def invited_register(gid: int, uid: str, user: str, db: Session):
     db_user = db.query(User).filter(User.id == uid).first()
@@ -267,6 +269,16 @@ async def invited_register(gid: int, uid: str, user: str, db: Session):
     db.refresh(db_group)
     return {"msg": "invited added successfully."}
 
+async def invited_delete(gid: int, user: str, db: Session):
+    already_invited = db.query(Invited).filter(Invited.uid == user, Invited.gid == gid).first()
+    if not already_invited:
+        raise HTTPException(status_code=401, detail="not already invited")
+    
+    db.delete(already_invited)
+    db.commit()
+    return {"msg": "invited deleted successfully."}
+
+    
 async def get_all_meetings(gid: int, db: Session):
     return db.query(Meeting).filter(Meeting.gid == gid).all()
 
@@ -298,7 +310,25 @@ async def meeting_remove(meetid: int, db: Session):
     db.commit()
     return {"msg": "meeting deleted successfully."}
 
-async def member_register(gid: int, member: str, user: str, db: Session):
+async def member_register(gid: int, user: str, db: Session):
+    db_user = db.query(User).filter(User.id == user).first()
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User doesn't exist")
+    already_member = db.query(Member).filter(Member.gid == gid, Member.uid == user).first()
+    if already_member:
+        raise HTTPException(status_code=401, detail="already member")
+    already_invited = db.query(Invited).filter(Invited.uid == user, Invited.gid == gid).first()
+    if not already_invited:
+        raise HTTPException(status_code=401, detail="not already invited")
+    db_member = Member(gid=gid, uid=user)
+    db.add(db_member)
+    db.delete(already_invited)
+    db.commit()
+    db.refresh(db_member)
+    calendar_success = await groupcal_register2(gid, user, db)
+    return {"msg": "member added successfully."}
+
+async def member_register2(gid: int, member: str, user: str, db: Session):
     db_user = db.query(User).filter(User.id == member).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User doesn't exist")
@@ -309,11 +339,10 @@ async def member_register(gid: int, member: str, user: str, db: Session):
     db.add(db_member)
     db.commit()
     db.refresh(db_member)
-    calendar_success = await groupcal_register(gid, member, db)
+    calendar_success = await groupcal_register2(gid, member, db)
     return {"msg": "member added successfully."}
 
-
-
+# 멤버인 상태에서 개인 캘린더 추가하면 반영
 async def groupcal_register(ccid: int, member: str, db: Session):
     db_member = db.query(Member).filter(Member.uid == member).all()
     for x in db_member:
@@ -325,6 +354,19 @@ async def groupcal_register(ccid: int, member: str, db: Session):
         db.add(db_event)
         db.commit()
     return {"msg": "group calendar added successfully."}
+
+# 멤버 등록시 그룹캘린더에 일정 추가
+async def groupcal_register2(gid: int, member: str, db: Session):
+    db_group = db.query(Group).filter(Group.gid == gid).first()
+    if not db_group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist") 
+    db_allevent = db.query(Event).filter(Event.uid == member).all()
+    for x in db_allevent:
+        db_event = GroupEvent(gid=gid, ccid=x.cid, cname=x.cname, \
+            sdatetime=x.sdatetime, edatetime=x.edatetime, visibility=x.visibility)
+        db.add(db_event)
+        db.commit()
+    return {"msg": "user events added to group calendar successfully."}
 
 async def groupcal_update(ccid: int, event: EventSchema, db: Session):
     db_event = db.query(GroupEvent).filter(GroupEvent.ccid == ccid).all()
@@ -385,6 +427,29 @@ async def get_my_group(user: str, db: Session):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
     return db_group
 
+async def get_my_invited(user: str, db: Session):
+    db_invited = db.query(Invited).filter(Invited.uid == user).all()
+    if not db_invited:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invited list doesn't exist")
+    return db_invited
+
+
+from fastapi import Request
+from fastapi.responses import RedirectResponse
+from fastapi.templating import Jinja2Templates
+
+templates=Jinja2Templates(directory='./app/kakaoshare')
+async def send_kakao(req: Request, gid: int, user: str, db: Session):
+    db_group = db.query(Group).filter(Group.gid == gid).first()
+    if not db_group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
+    return templates.TemplateResponse("kakao_share.html",
+                                      {"request": req,
+                                       "groupname": db_group.gname,
+                                       "gid": gid,
+                                       "username": user})
+    # return RedirectResponse("/", status_code=302)
+
 async def get_weekly_groupcal(gid: int, start_date: datetime, end_date: datetime, db: Session):
     db_event = db.query(GroupEvent).filter(
         GroupEvent.gid == gid, 
@@ -394,3 +459,39 @@ async def get_weekly_groupcal(gid: int, start_date: datetime, end_date: datetime
     if not db_event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group calendar doesn't exist")
     return db_event
+
+# get group info by gid
+async def get_groupinfo(gid: int, db: Session):
+    db_group = db.query(Group).filter(Group.gid == gid).first()
+    if not db_group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
+    return db_group
+
+
+async def favorite_group_register(gid: int, user: str, db: Session):
+    db_group = db.query(Group).filter(Group.gid == gid).first()
+    if not db_group:
+        raise HTTPException(status_code=401, detail="group doesn't exist")
+    db_member = db.query(Member).filter(Member.gid == gid, Member.uid == user).first()
+    if not db_member:
+        raise HTTPException(status_code=401, detail="not group member")
+    db_group = db.query(Group).filter(Group.gid == gid).first()
+    db_favorite = Favorite(uid=user, gid=gid, gname=db_group.gname)
+    db.add(db_favorite)
+    db.commit()
+    db.refresh(db_favorite)
+    return {"msg": "favorite group added successfully."}
+
+async def favorite_group_get(user: str, db: Session):
+    db_favorite = db.query(Favorite).filter(Favorite.uid == user).all()
+    if not db_favorite:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite list doesn't exist")
+    return db_favorite
+
+async def favorite_group_delete(gid: int, user: str, db: Session):
+    db_favorite = db.query(Favorite).filter(Favorite.gid == gid, Favorite.uid == user).first()
+    if not db_favorite:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite group doesn't exist")
+    db.delete(db_favorite)
+    db.commit()
+    return {"msg": "favorite deleted successfully."}
