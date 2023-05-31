@@ -431,14 +431,14 @@ async def google_event_register(user: str, db: Session):
 
 async def get_my_group(user: str, db: Session):
     db_group = db.query(Group).filter(Group.gid == Member.gid, Member.uid == user).all()
-    if not db_group:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
+    # if not db_group:
+    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
     return db_group
 
 async def get_my_invited(user: str, db: Session):
     db_invited = db.query(Group).join(Invited, Invited.gid == Group.gid).filter(Invited.uid == user).all()
-    if not db_invited:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invited list doesn't exist")
+    # if not db_invited:
+    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invited list doesn't exist")
     return db_invited
 
 
