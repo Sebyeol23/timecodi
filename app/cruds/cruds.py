@@ -436,7 +436,7 @@ async def get_my_group(user: str, db: Session):
     return db_group
 
 async def get_my_invited(user: str, db: Session):
-    db_invited = db.query(Invited).filter(Invited.uid == user).all()
+    db_invited = db.query(Group).join(Invited.gid == Group.gid).filter(Invited.uid == user).all()
     if not db_invited:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invited list doesn't exist")
     return db_invited
