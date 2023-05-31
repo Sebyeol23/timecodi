@@ -350,6 +350,12 @@ async def member_register2(gid: int, member: str, user: str, db: Session):
     calendar_success = await groupcal_register2(gid, member, db)
     return {"msg": "member added successfully."}
 
+async def get_is_admin(gid: int, user: str, db: Session):
+    db_group = db.query(Group).filter(Group.gid==gid).first()
+    if not db_group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
+    return user == db_group.admin
+
 # 멤버인 상태에서 개인 캘린더 추가하면 반영
 async def groupcal_register(ccid: int, member: str, db: Session):
     db_member = db.query(Member).filter(Member.uid == member).all()
