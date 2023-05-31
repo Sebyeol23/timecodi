@@ -26,6 +26,7 @@ async def signin(user: OAuth2PasswordRequestForm, db: Session):
         return {
             "access_token": access_token,
             "token_type": "Bearer",
+            "userid": user_exist.uid,
             "username": user_exist.name
         }
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid details passed")
