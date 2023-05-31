@@ -358,7 +358,7 @@ async def get_is_admin(gid: int, user: str, db: Session):
 
 async def transfer_admin(who: InviteSchema, user: str, db: Session):
     if get_is_admin(who.gid, user, db):
-        db_group = db.query(Group).filter(Group.gid==gid).first()
+        db_group = db.query(Group).filter(Group.gid==who.gid).first()
         db_group.admin = who.uid
         group = {"gid": who.gid}
         group_leave(group, user, db)
