@@ -235,6 +235,13 @@ async def group_update(gid: int, group: GroupSchema, db: Session):
     db.refresh(db_group)
     return {"msg": "group name updated successfully."}
 
+async def group_remove(group: GroupSchema, user: str, db: Session):
+    db_group = db.query(Group).filter(Group.gid == gid).first()
+    if not db_group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
+    if get_is_admin({gid: group.gid}, user, db) == False:
+        return {"msg": "admin can only"}
+
 async def group_leave(group: MemberSchema, user: str, db: Session):
     db_group = db.query(Group).filter(Group.gid == group.gid).first()
     if not db_group:
