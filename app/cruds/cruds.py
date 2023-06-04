@@ -244,6 +244,9 @@ async def group_leave(group: MemberSchema, user: str, db: Session):
         raise HTTPException(status_code=401, detail="Not group member")
     db.delete(db_member)
     db.commit()
+
+    if(get_is_admin(group.gid, user, db)):
+        return {"msg": "admin can't leave"}
     
     db_favorite = db.query(Favorite).filter(Favorite.gid == group.gid, Favorite.uid == user).first()
     if not db_favorite:
