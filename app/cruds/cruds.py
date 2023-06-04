@@ -242,7 +242,7 @@ async def group_leave(group: MemberSchema, user: str, db: Session):
     db_member = db.query(Member).filter(Member.gid == group.gid, Member.uid == user).first()
     if not db_member:
         raise HTTPException(status_code=401, detail="Not group member")
-    if(get_is_admin(group.gid, user, db)):
+    if get_is_admin(group, user, db):
         return {"msg": "admin can't leave"}
     db.delete(db_member)
     db.commit()
@@ -366,8 +366,8 @@ async def member_register2(gid: int, member: str, user: str, db: Session):
     calendar_success = await groupcal_register2(gid, member, db)
     return {"msg": "member added successfully."}
 
-async def get_is_admin(gid: int, user: str, db: Session):
-    db_group = db.query(Group).filter(Group.gid==gid).first()
+async def get_is_admin(group: MemberSchema, user: str, db: Session):
+    db_group = db.query(Group).filter(Group.gid==group.gid).first()
     if not db_group:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
     return user == db_group.admin
