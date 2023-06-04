@@ -119,7 +119,7 @@ async def update_group(gid: int, group: GroupSchema, db: Session = Depends(get_d
     return update_success
 
 @router.delete("/group")
-async def delete_group(group: GroupSchema, user: str = Depends(authenticate), db: Session = Depends(get_db)):
+async def delete_group(group: MemberSchema, user: str = Depends(authenticate), db: Session = Depends(get_db)):
     remove_success = await group_remove(group, user, db)
     return remove_success
 
