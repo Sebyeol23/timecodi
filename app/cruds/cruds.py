@@ -248,10 +248,10 @@ async def group_leave(group: MemberSchema, user: str, db: Session):
     db.commit()
     
     db_favorite = db.query(Favorite).filter(Favorite.gid == group.gid, Favorite.uid == user).first()
-    if not db_favorite:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite group doesn't exist")
-    db.delete(db_favorite)
-    db.commit()
+    if db_favorite:
+        # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Favorite group doesn't exist")
+        db.delete(db_favorite)
+        db.commit()
     
     db_event = db.query(Event).filter(Event.uid == user).all()
     for x in db_event:
