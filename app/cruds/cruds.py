@@ -706,13 +706,14 @@ async def get_friendcal(fid: str, user: str, db: Session):
     return db.query(Event).filter(Event.uid == fid).all()
 
 async def remove_account(user: str, db: Session):
-    db_user = db.query(User).filter(User.id == user).fisrt()
+    db_user = db.query(User).filter(User.id == user).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User doesn't exist")
 
     is_admin = db.query(Group).filter(Group.admin == user).first()
     if is_admin:
         return {"msg": "Transfer Admin first!"}
+
     db_cal = db.query(Event).filter(Event.uid == user).all()
     for i in db_cal:
         db.delete(i)
