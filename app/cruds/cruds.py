@@ -704,3 +704,6 @@ async def get_friendcal(fid: str, user: str, db: Session):
     if not is_friend:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Friend doesn't exist")
     return db.query(Event).filter(Event.uid == fid).all()
+
+async def remove_account(user: str, db: Session):
+    return {"msg": "account deleted!"}
