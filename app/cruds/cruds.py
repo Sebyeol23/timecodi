@@ -726,7 +726,7 @@ async def remove_account(user: str, db: Session):
     for i in db_friendrequest:
         db.delete(i)
 
-    db_friend = db.query(Friend).filter(pr_(Friend.uid == user, Friend.fid == user)).all()
+    db_friend = db.query(Friend).filter(or_(Friend.uid == user, Friend.fid == user)).all()
     for i in db_friendrequest:
         db.delete(i)
 
