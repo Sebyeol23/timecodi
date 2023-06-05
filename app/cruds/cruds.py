@@ -239,8 +239,7 @@ async def group_remove(group: MemberSchema, user: str, db: Session):
     db_group = db.query(Group).filter(Group.gid == group.gid).first()
     if not db_group:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
-    if not db_member:
-        raise HTTPException(status_code=401, detail="Not group member")
+        
     if get_is_admin(group.gid, user, db) == False:
         return {"msg": "admin can only"}
     # 멤버, 그룹 일정, 미팅 일정, 초대, 즐겨찾기, 그룹 삭제
