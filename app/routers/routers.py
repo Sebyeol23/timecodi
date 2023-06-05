@@ -292,5 +292,5 @@ async def get_vote_result(gid: int, db: Session = Depends(get_db)):
 
 @router.get("/friendcal")
 async def get_friend_cal(fid: str, user: str = Depends(authenticate), db: Session = Depends(get_db)):
-    friend_cal = await get_friendcal(friend, user, db)
+    friend_cal = await get_friendcal(fid, user, db)
     return friend_cal
