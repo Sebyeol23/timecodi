@@ -31,8 +31,8 @@ class InviteSchema(BaseModel):
     
 class MeetingSchema(BaseModel):
     title: str
-    sdatetime: datetime
-    edatetime: datetime
+    sdatetime: date
+    edatetime: date
     location: str
     loc_detail: str
     memo: str
