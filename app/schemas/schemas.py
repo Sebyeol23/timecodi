@@ -31,8 +31,8 @@ class InviteSchema(BaseModel):
     
 class MeetingSchema(BaseModel):
     title: str
-    sdatetime: date
-    edatetime: date
+    sdatetime: datetime
+    edatetime: datetime
     location: str
     loc_detail: str
     memo: str
@@ -42,6 +42,6 @@ class FriendSchema(BaseModel):
 
 class VoteTimeSchema(BaseModel):
     gid: int
-    sdatetime: datetime
-    edatetime: datetime
+    sdatetime: date
+    edatetime: date
     meetingtime: str
