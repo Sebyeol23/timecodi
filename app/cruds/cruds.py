@@ -585,8 +585,8 @@ async def get_votetime(gid: int, db: Session):
 
 
 async def generate_votetime(vt: VoteTimeSchema, db: Session):
-    sdatetime = vt.sdatetime.isoformat()
-    edatetime = vt.edatetime.isoformat()
+    # sdatetime = vt.sdatetime.isoformat()
+    # edatetime = vt.edatetime.isoformat()
     db_group = db.query(Group).filter(Group.gid == vt.gid).first()
     if not db_group:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
@@ -603,7 +603,7 @@ async def generate_votetime(vt: VoteTimeSchema, db: Session):
             db.delete(i)
             db.commit()
     
-    group_cal = await get_weekly_groupcal(vt.gid, sdatetime, edatetime, db)
+    group_cal = await get_weekly_groupcal(vt.gid, vt.sdatetime, vt.edatetime, db)
     for x in create_vote(group_cal[0], vt.meetingtime):
         db_votetime = GenerateVote(gid = vt.gid, day = x[0], s_time = x[1], e_time = x[2], members = 0)
         db.add(db_votetime)
