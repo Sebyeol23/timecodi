@@ -242,7 +242,8 @@ async def group_remove(group: MemberSchema, user: str, db: Session):
     if not db_group:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
 
-    if get_is_admin(group.gid, user, db) == False:
+    is_admin = get_is_admin(group.gid, user, db)
+    if  is_admin== False:
         return {"msg": "admin can only"}
     # 멤버, 그룹 일정, 미팅 일정, 초대, 즐겨찾기, 그룹 삭제
     db_member = db.query(Member).filter(Member.gid == group.gid).all()
@@ -276,7 +277,8 @@ async def group_leave(group: MemberSchema, user: str, db: Session):
     db_member = db.query(Member).filter(Member.gid == group.gid, Member.uid == user).first()
     if not db_member:
         raise HTTPException(status_code=401, detail="Not group member")
-    if get_is_admin(group.gid, user, db) == True:
+    is_admin = get_is_admin(group.gid, user, db)
+    if is_admin == True:
         return {"msg": "Transfer the admin permission and then leave please."}
     db.delete(db_member)
     db.commit()
@@ -407,7 +409,8 @@ async def get_is_admin(gid: int, user: str, db: Session):
     return user == db_group.admin
 
 async def transfer_admin(who: InviteSchema, user: str, db: Session):
-    if get_is_admin(who.gid, user, db):
+    is_admin = get_is_admin(who.gid, user, db)
+    if is_admin == True:
         db_group = db.query(Group).filter(Group.gid==who.gid).first()
         db_group.admin = who.uid
         group = {"gid": who.gid}
@@ -418,7 +421,8 @@ async def transfer_admin(who: InviteSchema, user: str, db: Session):
     else:
         return {"success": False}
 async def kick_member(who: InviteSchema, user: str, db: Session):
-    if get_is_admin(who.gid, user, db):
+    is_admin = get_is_admin(who.gid, user, db)
+    if is_admin == True:
         db_group = db.query(Group).filter(Group.gid == who.gid).first()
         if not db_group:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
