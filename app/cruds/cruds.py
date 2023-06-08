@@ -764,7 +764,9 @@ async def get_upcoming(gid: int, user: str, db: Session):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
     
     now = datetime.now()
-    return now
+    current = db.query(Meeting).filter(Meeting.sdatetime <= now, Meeting.edatetime > now).first()
+    if current:
+        return current
 
 async def remove_account(user: str, db: Session):
     db_user = db.query(User).filter(User.id == user).first()
