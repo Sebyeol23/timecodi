@@ -299,7 +299,7 @@ async def group_leave(group: MemberSchema, user: str, db: Session):
     return {"msg": "group member deleted successfully."}
 
 async def invited_register(invite: InviteSchema, user: str, db: Session):
-    if get_is_admin(invite.gid, user, db):
+    if db.query(Group).filter(Group.gid == invite.gid, Group.admin == user).first():
         db_user = db.query(User).filter(User.id == invite.uid).first()
         if not db_user:
             raise HTTPException(status_code=stiatus.HTTP_404_NOT_FOUND, detail="User doesn't exist")
