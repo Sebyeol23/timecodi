@@ -170,6 +170,8 @@ async def get_all_requests(user: str, db: Session):
 
 async def friend_request(friend: FriendSchema, user: str, db: Session):
     friend_user_exist = db.query(User).filter(User.id == friend.fid).first()
+    if user == friend.fid:
+        raise HTTPException(status_code=401, detail="it's you")
     if not friend_user_exist:
         raise HTTPException(status_code=404, detail="There is no user")
     already_friend = db.query(Friend).filter(Friend.uid == user, Friend.fid == friend.fid).first()
