@@ -421,8 +421,7 @@ async def transfer_admin(who: InviteSchema, user: str, db: Session):
     else:
         return {"success": False}
 async def kick_member(who: InviteSchema, user: str, db: Session):
-    is_admin = get_is_admin(who.gid, user, db)
-    if is_admin == True:
+    if get_is_admin(who.gid, user, db):
         db_group = db.query(Group).filter(Group.gid == who.gid).first()
         if not db_group:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
