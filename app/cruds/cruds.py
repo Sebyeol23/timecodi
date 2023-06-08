@@ -83,6 +83,7 @@ async def event_register(event: EventSchema, user: str, db: Session):
                 db.add(db_event)
                 db.commit()
                 db.refresh(db_event)
+                calendar_success = await groupcal_register(db_event.cid, user, db)
                 event.sdatetime+=timedelta(weeks=1)
                 event.edatetime+=timedelta(weeks=1)
     # enddate가 null이면 반복 x
@@ -92,7 +93,7 @@ async def event_register(event: EventSchema, user: str, db: Session):
         db.add(db_event)
         db.commit()
         db.refresh(db_event)
-    calendar_success = await groupcal_register(db_event.cid, user, db)
+        calendar_success = await groupcal_register(db_event.cid, user, db)
     return {"msg": "event added successfully."}
         
 
@@ -100,6 +101,7 @@ async def event_remove(cid: int, deleteall: bool, user: str, db: Session):
     db_event = db.query(Event).filter(Event.uid == user, Event.cid == cid).first()
     if not db_event:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event doesn't exist")
+    calendar_success = await groupcal_remove(db_event.cid, db)
     db.delete(db_event)
     db.commit()
     weekly_id=db_event.weekly
@@ -109,9 +111,9 @@ async def event_remove(cid: int, deleteall: bool, user: str, db: Session):
             db_event = db.query(Event).filter(Event.uid == user, Event.weekly == weekly_id).first()
             if not db_event:
                 break
+            calendar_success = await groupcal_remove(db_event.cid, db)
             db.delete(db_event)
             db.commit()
-    calendar_success = await groupcal_remove(cid, db)
     return {"msg": "event deleted successfully."}    
 
 async def event_update(cid: int, event: EventSchema, user: str, db: Session):
@@ -469,7 +471,7 @@ async def groupcal_register2(gid: int, member: str, db: Session):
 async def groupcal_update(ccid: int, event: EventSchema, db: Session):
     db_event = db.query(GroupEvent).filter(GroupEvent.ccid == ccid).all()
     if not db_event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meeting doesn't exist")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="events doesn't exist")
     for x in db_event:
         x.cname = event.cname
         x.sdatetime = event.sdatetime
@@ -477,16 +479,16 @@ async def groupcal_update(ccid: int, event: EventSchema, db: Session):
         x.visibility = event.visibility
         db.add(x)
         db.commit()
-    return {"msg": "meeting info updated successfully."}
+    return {"msg": "events info updated successfully."}
 
 async def groupcal_remove(ccid: int, db: Session):
     db_event = db.query(GroupEvent).filter(GroupEvent.ccid == ccid).all()
     if not db_event:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meeting doesn't exist")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="events doesn't exist")
     for x in db_event:
         db.delete(x)
         db.commit()
-    return {"msg": "meeting deleted successfully."}
+    return {"msg": "events deleted successfully."}
 
 async def get_all_groupcal(gid: int, user: str, db: Session):
     return db.query(GroupEvent).filter(GroupEvent.gid == gid).all()
@@ -610,7 +612,38 @@ async def generate_votetime(vt: VoteTimeSchema, db: Session):
         db.commit()
         db.refresh(db_votetime)
     return {"msg": "votetime added successfully."}
-    
+
+async def vote_func(gid: str, vid_list: list, user: str, db: Session):
+    if len(vid_list)==0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Please vote time at least one!")
+    db_exist = await get_all_vote(gid, user, db)
+    # 기존 투표 존재하는데 vid_list에서 제외됐으면 삭제 
+    if db_exist:
+        for x in db_exist:
+            vid = x.vid
+            if vid not in vid_list:
+                db_delete = await vote_delete(vid, user, db)
+    for vid in vid_list:
+        votetime_exist = db.query(GenerateVote).filter(GenerateVote.vid == vid).first()
+        if not votetime_exist:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="votetime doesn't exist")
+        # 이미 존재하는 투표인지 확인
+        db_vote = db.query(Vote).filter(Vote.vid == vid, Vote.uid == user).first()
+        # 기존에 투표되어있음
+        if db_vote:
+            continue
+        # 새투표 등록
+        else:
+            db_register = await vote_register(vid, user, db)
+    return {"msg": "user vote successfully."}
+
+async def get_all_vote(gid: str, user: str, db: Session):
+    db_group = db.query(Member).filter(Member.gid == gid, Member.uid == user).first()
+    if not db_group:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not group member")
+    db_vote = db.query(Vote).filter(Vote.gid == gid, Vote.uid == user).all()
+    return db_vote
+
 async def vote_register(vid: int, user: str, db: Session):
     votetime_exist = db.query(GenerateVote).filter(GenerateVote.vid == vid).first()
     if not votetime_exist:
@@ -661,8 +694,8 @@ async def get_voteresult(gid: int, db: Session):
             max_members2 = x.members
     if max_members2!=0:
         db_max2 = db.query(GenerateVote).filter(GenerateVote.gid == gid, GenerateVote.members == max_members2).all()
-        db_max.append(db_max2)
-
+        for x in db_max2:
+            db_max.append(x)
     return db_max
 
 # get group info by gid
