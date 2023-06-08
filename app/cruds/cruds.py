@@ -304,17 +304,18 @@ async def invited_register(invite: InviteSchema, user: str, db: Session):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User doesn't exist")
     if not get_is_admin(invite.gid, user, db):
         raise HTTPException(status_code=status.HTTP_401_NOT_FOUND, detail="Only admin can invite members")
-    already_invited = db.query(Invited).filter(Invited.uid == invite.uid, Invited.gid == invite.gid).first()
-    if already_invited:
-        raise HTTPException(status_code=401, detail="already invited")
-    already_member = db.query(Member).filter(Member.gid == invite.gid, Member.uid == invite.uid).first()
-    if already_member:
-        raise HTTPException(status_code=401, detail="already member")
-    db_group = Invited(gid=invite.gid, uid=invite.uid)
-    db.add(db_group)
-    db.commit()
-    db.refresh(db_group)
-    return {"msg": "invited added successfully."}
+    else:
+        already_invited = db.query(Invited).filter(Invited.uid == invite.uid, Invited.gid == invite.gid).first()
+        if already_invited:
+            raise HTTPException(status_code=401, detail="already invited")
+        already_member = db.query(Member).filter(Member.gid == invite.gid, Member.uid == invite.uid).first()
+        if already_member:
+            raise HTTPException(status_code=401, detail="already member")
+        db_group = Invited(gid=invite.gid, uid=invite.uid)
+        db.add(db_group)
+        db.commit()
+        db.refresh(db_group)
+        return {"msg": "invited added successfully."}
 
 async def invited_delete(group: MemberSchema, user: str, db: Session):
     already_invited = db.query(Invited).filter(Invited.uid == user, Invited.gid == group.gid).first()
