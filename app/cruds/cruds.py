@@ -768,6 +768,16 @@ async def get_upcoming(gid: int, user: str, db: Session):
     current = db.query(Meeting).filter(Meeting.sdatetime <= now, Meeting.edatetime > now).first()
     if current:
         return current
+    else:
+        upcoming_list = db.query(Meeting).filter(Meeting.sdatetime > now).all()
+        if not upcoming_list:
+            return 
+        else:
+            upcoming = upcoming_list[0]
+            for meeting in upcoming_list:
+                if meeting.sdatetime < upcoming.sdatetime:
+                    upcoming = meeting
+            return upcoming
 
 async def remove_account(user: str, db: Session):
     db_user = db.query(User).filter(User.id == user).first()
