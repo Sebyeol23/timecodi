@@ -425,6 +425,8 @@ async def kick_member(who: InviteSchema, user: str, db: Session):
         db_member = db.query(Member).filter(Member.gid == who.gid, Member.uid == who.uid).first()
         if not db_member:
             raise HTTPException(status_code=401, detail="Not group member")
+        if who.uid == user:
+            raise HTTPException(status_code=401, detail="You can't kick out yourself!")
         db.delete(db_member)
         db.commit()
         
