@@ -763,7 +763,7 @@ async def get_upcoming(gid: int, user: str, db: Session):
     if not is_member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group doesn't exist")
     
-    now = datetime.now() + datetime.timedelta(hours=9)
+    now = datetime.now() + timedelta(hours=9)
     return now
     current = db.query(Meeting).filter(Meeting.sdatetime <= now, Meeting.edatetime > now).first()
     if current:
